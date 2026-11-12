@@ -25,35 +25,33 @@ P:zlib
 V:1.3.1-r2
 """
 
+PACKAGES, PROVIDES = parse_index(INDEX)
+
 
 class RepoTest(unittest.TestCase):
     """Проверка функций модуля repo."""
 
-    def setUp(self):
-        """Разбирает пример APKINDEX."""
-        self.packages, self.provides = parse_index(INDEX)
-
     def test_parse(self):
         """Все пакеты и версии прочитаны."""
-        self.assertEqual(set(self.packages),
+        self.assertEqual(set(PACKAGES),
                          {"curl", "libcurl", "musl", "zlib"})
-        self.assertEqual(self.packages["curl"]["version"], "8.14.1-r4")
+        self.assertEqual(PACKAGES["curl"]["version"], "8.14.1-r4")
 
     def test_resolve(self):
         """so:-зависимости заменяются пакетами, конфликты (!) пропускаются."""
-        deps = resolve_deps("curl", self.packages, self.provides)
+        deps = resolve_deps("curl", PACKAGES, PROVIDES)
         self.assertEqual(deps, ["ca-certificates", "libcurl", "musl"])
-        deps = resolve_deps("libcurl", self.packages, self.provides)
+        deps = resolve_deps("libcurl", PACKAGES, PROVIDES)
         self.assertEqual(deps, ["musl", "zlib"])
 
     def test_check_version(self):
         """Неверная версия или неизвестный пакет - ошибка."""
-        check_version(self.packages, "curl", "8.14.1-r4")
-        check_version(self.packages, "curl", "latest")
+        check_version(PACKAGES, "curl", "8.14.1-r4")
+        check_version(PACKAGES, "curl", "latest")
         with self.assertRaises(RepoError):
-            check_version(self.packages, "curl", "1.0")
+            check_version(PACKAGES, "curl", "1.0")
         with self.assertRaises(RepoError):
-            check_version(self.packages, "wget", "latest")
+            check_version(PACKAGES, "wget", "latest")
 
     def test_load_test_repo(self):
         """Тестовый файл читается, строчные имена - ошибка."""
