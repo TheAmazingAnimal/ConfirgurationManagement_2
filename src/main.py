@@ -5,6 +5,7 @@ import os
 import sys
 
 from config import ConfigError, load_config
+from repo import RepoError, make_dep_getter
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,6 +17,8 @@ def parse_args(argv):
     )
     parser.add_argument("config", nargs="?", default="config.csv",
                         help="путь к конфигурационному CSV-файлу")
+    parser.add_argument("--show-config", action="store_true",
+                        help="вывести параметры конфигурации (этап 1)")
     return parser.parse_args(argv)
 
 
@@ -25,10 +28,21 @@ def print_config(config):
         print(f"{key} = {value}")
 
 
+def print_direct(root, get_deps):
+    """Выводит прямые зависимости пакета root."""
+    print(f"Прямые зависимости {root}:")
+    for dep in get_deps(root):
+        print(f"  {dep}")
+
+
 def run(args):
     """Выполняет программу по аргументам, возвращает код завершения."""
     config = load_config(args.config)
-    print_config(config)
+    if args.show_config:
+        print_config(config)
+        return 0
+    get_deps = make_dep_getter(config)
+    print_direct(config["package_name"], get_deps)
     return 0
 
 
@@ -42,7 +56,7 @@ def main(argv=None):
     args = parse_args(argv)
     try:
         return run(args)
-    except ConfigError as err:
+    except (ConfigError, RepoError) as err:
         print(f"Ошибка: {err}", file=sys.stderr)
         return 1
 

@@ -7,7 +7,7 @@
 
 Программа получает зависимости пакета Alpine Linux (apk) напрямую из
 репозитория (файл APKINDEX) без менеджеров пакетов и сторонних библиотек.
-Сейчас реализовано чтение и проверка настроек из CSV-файла.
+Сейчас программа выводит прямые зависимости пакета.
 
 ## Настройки
 
@@ -19,9 +19,14 @@
 - `version` — версия пакета;
 - `ascii_tree` — выводить ли ASCII-дерево (`true` / `false`).
 
+Флаги запуска:
+
+- `--show-config` — вывести параметры конфигурации;
+
 ## Функции
 
 - `config.py` — `load_config()` читает и проверяет настройки;
+- `repo.py` — `download_index()` скачивает APKINDEX, `parse_index()` разбирает его, `resolve_deps()` находит прямые зависимости;
 - `main.py` — точка входа программы.
 
 ## Запуск и тесты
@@ -37,7 +42,7 @@
 ## Примеры
 
 ```
-$ ./run.sh
+$ ./run.sh --show-config
 package_name = curl
 repo_url = https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64
 test_mode = False
@@ -46,4 +51,12 @@ ascii_tree = True
 
 $ ./run.sh examples/config_bad_bool.csv
 Ошибка: Параметр 'test_mode' должен быть true или false, получено 'maybe'
+```
+
+```
+$ ./run.sh
+Прямые зависимости curl:
+  libcurl
+  musl
+  zlib
 ```
