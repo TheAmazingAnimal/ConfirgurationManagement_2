@@ -5,7 +5,7 @@ import os
 import sys
 
 from config import ConfigError, load_config
-from graph import build_graph
+from graph import build_graph, load_order
 from repo import RepoError, make_dep_getter
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +22,8 @@ def parse_args(argv):
                         help="вывести параметры конфигурации (этап 1)")
     parser.add_argument("--direct", action="store_true",
                         help="вывести только прямые зависимости (этап 2)")
+    parser.add_argument("--order", action="store_true",
+                        help="вывести порядок загрузки зависимостей (этап 4)")
     return parser.parse_args(argv)
 
 
@@ -45,6 +47,16 @@ def print_graph(graph):
         print(f"  {name}: {' '.join(deps)}")
 
 
+def print_order(graph, root):
+    """Выводит порядок загрузки зависимостей и найденные циклы."""
+    order, cycles = load_order(graph, root)
+    print("Порядок загрузки:")
+    for number, name in enumerate(order, start=1):
+        print(f"{number}. {name}")
+    for name, dep in cycles:
+        print(f"Обнаружен цикл: {name} -> {dep} (ребро пропущено)")
+
+
 def run(args):
     """Выполняет программу по аргументам, возвращает код завершения."""
     config = load_config(args.config)
@@ -56,7 +68,11 @@ def run(args):
     if args.direct:
         print_direct(root, get_deps)
         return 0
-    print_graph(build_graph(root, get_deps))
+    graph = build_graph(root, get_deps)
+    if args.order:
+        print_order(graph, root)
+        return 0
+    print_graph(graph)
     return 0
 
 
