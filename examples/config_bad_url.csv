@@ -1,0 +1,6 @@
+parameter,value
+package_name,curl
+repo_url,ftp://example.com/repo
+test_mode,false
+version,8.14.1-r4
+ascii_tree,false
