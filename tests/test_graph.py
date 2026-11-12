@@ -1,8 +1,8 @@
-"""Тесты построения графа и порядка загрузки."""
+"""Тесты построения графа, порядка загрузки и визуализации."""
 
 import unittest
 
-from graph import build_graph, load_order
+from graph import ascii_tree, build_graph, load_order, to_dot
 
 SIMPLE = {"A": ["B", "C"], "B": ["D"], "C": ["D"], "D": []}
 CYCLE = {"A": ["B"], "B": ["C"], "C": ["A"]}
@@ -38,6 +38,21 @@ class GraphTest(unittest.TestCase):
         order, cycles = load_order(CYCLE, "A")
         self.assertEqual(order, ["C", "B", "A"])
         self.assertEqual(cycles, [("C", "A")])
+
+    def test_dot(self):
+        """DOT содержит все рёбра графа."""
+        text = to_dot(SIMPLE, "A")
+        self.assertTrue(text.startswith("digraph"))
+        self.assertIn('"A" -> "B";', text)
+        self.assertIn('"C" -> "D";', text)
+
+    def test_ascii_tree(self):
+        """Повторный пакет помечается (*), цикл - (цикл)."""
+        self.assertEqual(
+            ascii_tree(SIMPLE, "A"),
+            "A\n├── B\n│   └── D\n└── C\n    └── D (*)",
+        )
+        self.assertIn("A (цикл)", ascii_tree(CYCLE, "A"))
 
 
 if __name__ == "__main__":

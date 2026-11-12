@@ -55,3 +55,44 @@ def load_order(graph, root):
 
     visit(root)
     return order, cycles
+
+
+def to_dot(graph, root):
+    """Возвращает описание графа на языке Graphviz (DOT)."""
+    lines = ["digraph dependencies {", "    rankdir=LR;"]
+    lines.append(f'    "{root}" [style=filled, fillcolor=lightblue];')
+    for name, deps in graph.items():
+        if not deps:
+            lines.append(f'    "{name}";')
+        for dep in deps:
+            lines.append(f'    "{name}" -> "{dep}";')
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def ascii_tree(graph, root):
+    """Возвращает зависимости в виде ASCII-дерева (строка)."""
+    lines = [root]
+    add_children(graph, root, "", lines, {root}, [root])
+    return "\n".join(lines)
+
+
+def add_children(graph, name, prefix, lines, shown, path):
+    """Рекурсивно добавляет в lines строки для зависимостей пакета name.
+
+    Пакет, который уже был выведен раньше, помечается (*) и не
+    раскрывается повторно. Возврат к пакету из текущего пути - (цикл).
+    """
+    deps = graph.get(name, [])
+    for index, dep in enumerate(deps):
+        is_last = index == len(deps) - 1
+        branch = "└── " if is_last else "├── "
+        if dep in path:
+            lines.append(prefix + branch + dep + " (цикл)")
+        elif dep in shown:
+            lines.append(prefix + branch + dep + " (*)")
+        else:
+            lines.append(prefix + branch + dep)
+            shown.add(dep)
+            child_prefix = prefix + ("    " if is_last else "│   ")
+            add_children(graph, dep, child_prefix, lines, shown, path + [dep])
