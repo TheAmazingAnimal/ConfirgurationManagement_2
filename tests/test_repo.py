@@ -1,8 +1,11 @@
 """Тесты разбора APKINDEX и тестового репозитория."""
 
+import os
+import tempfile
 import unittest
 
-from repo import RepoError, check_version, parse_index, resolve_deps
+from repo import (RepoError, check_version, load_test_repo, parse_index,
+                  resolve_deps)
 
 INDEX = """C:Q1abc=
 P:curl
@@ -51,6 +54,19 @@ class RepoTest(unittest.TestCase):
             check_version(self.packages, "curl", "1.0")
         with self.assertRaises(RepoError):
             check_version(self.packages, "wget", "latest")
+
+    def test_load_test_repo(self):
+        """Тестовый файл читается, строчные имена - ошибка."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "repo.txt")
+            with open(path, "w", encoding="utf-8") as file:
+                file.write("# comment\nA: B C\nB:\n")
+            self.assertEqual(load_test_repo(path),
+                             {"A": ["B", "C"], "B": []})
+            with open(path, "w", encoding="utf-8") as file:
+                file.write("a: b\n")
+            with self.assertRaises(RepoError):
+                load_test_repo(path)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ import os
 import sys
 
 from config import ConfigError, load_config
+from graph import build_graph
 from repo import RepoError, make_dep_getter
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +20,8 @@ def parse_args(argv):
                         help="путь к конфигурационному CSV-файлу")
     parser.add_argument("--show-config", action="store_true",
                         help="вывести параметры конфигурации (этап 1)")
+    parser.add_argument("--direct", action="store_true",
+                        help="вывести только прямые зависимости (этап 2)")
     return parser.parse_args(argv)
 
 
@@ -35,14 +38,25 @@ def print_direct(root, get_deps):
         print(f"  {dep}")
 
 
+def print_graph(graph):
+    """Выводит граф: каждый пакет и список его прямых зависимостей."""
+    print("Граф зависимостей:")
+    for name, deps in graph.items():
+        print(f"  {name}: {' '.join(deps)}")
+
+
 def run(args):
     """Выполняет программу по аргументам, возвращает код завершения."""
     config = load_config(args.config)
     if args.show_config:
         print_config(config)
         return 0
+    root = config["package_name"]
     get_deps = make_dep_getter(config)
-    print_direct(config["package_name"], get_deps)
+    if args.direct:
+        print_direct(root, get_deps)
+        return 0
+    print_graph(build_graph(root, get_deps))
     return 0
 
 

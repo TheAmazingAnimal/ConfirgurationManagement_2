@@ -1,6 +1,8 @@
-"""Получение прямых зависимостей пакетов из репозитория Alpine Linux.
+"""Получение прямых зависимостей пакетов.
 
-Данные берутся из индекса репозитория (файл APKINDEX.tar.gz).
+Поддерживаются два источника:
+- настоящий репозиторий Alpine Linux (файл APKINDEX.tar.gz);
+- тестовый репозиторий: текстовый файл вида ``A: B C``.
 """
 
 import io
@@ -15,6 +17,7 @@ INDEX_FILE = "APKINDEX.tar.gz"
 INDEX_NAME = "APKINDEX"
 TIMEOUT = 30
 LATEST = "latest"
+TEST_NAME_PATTERN = re.compile(r"^[A-Z]+$")
 SYSTEM_CA_FILE = "/etc/ssl/cert.pem"
 
 
@@ -114,11 +117,34 @@ def check_version(packages, name, version):
         )
 
 
+def load_test_repo(path):
+    """Читает тестовый репозиторий: строки вида 'A: B C'."""
+    graph = {}
+    with open(path, encoding="utf-8") as file:
+        for line_no, line in enumerate(file, start=1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, sep, deps = line.partition(":")
+            names = [name.strip()] + deps.split()
+            bad = [n for n in names if not TEST_NAME_PATTERN.match(n)]
+            if not sep or bad:
+                raise RepoError(
+                    f"{path}, строка {line_no}: ожидается 'A: B C', "
+                    "имена пакетов - большие латинские буквы"
+                )
+            graph[names[0]] = names[1:]
+    return graph
+
+
 def make_dep_getter(config):
     """Возвращает функцию name -> список прямых зависимостей."""
     name = config["package_name"]
     if config["test_mode"]:
-        raise RepoError("Тестовый режим будет реализован на этапе 3")
+        graph = load_test_repo(config["repo_url"])
+        if name not in graph:
+            raise RepoError(f"Пакет '{name}' не найден в тестовом файле")
+        return lambda pkg: graph.get(pkg, [])
     packages, provides = parse_index(download_index(config["repo_url"]))
     check_version(packages, name, config["version"])
     return lambda pkg: resolve_deps(pkg, packages, provides)
